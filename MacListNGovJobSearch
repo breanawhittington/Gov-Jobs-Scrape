@@ -1,0 +1,74 @@
+#Other Job Searches - maclist, government jobs
+#https://www.usajobs.gov/Search/Results?l=Portland%2C%20Oregon&hp=public&p=1&k=remote  p=1&k=remote p is page number
+#User Agents https://www.whatismybrowser.com/guides/the-latest-user-agent/chrome
+#Mozilla/5.0 (Macintosh; Intel Mac OS X 12_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36
+#Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36
+
+import requests
+import time
+import csv
+from bs4 import BeautifulSoup
+from datetime import datetime
+
+
+
+#create CSV and add headers to save job listings
+filename = f'jobList-govjobs-{datetime.now():%Y-%m-%d %H-%m-%S}.csv'
+with open(filename, 'a+') as jobfile:  
+                writejob = csv.writer(jobfile)
+                writejob.writerow(('title', 'location', 'salary', 'date_posted', 'job_url', 'job_summary'))
+                #saved = os.path.join(path, filename)
+
+#use for JobURL
+baseURLgov = 'https://www.governmentjobs.com/'
+#Search Function
+
+#set up soup 
+#URL personalized on job site -- have option to personlize more by replacing city with {city}
+#since gov site doesn't have a lot of listings, look at all available listings
+
+def extractGov():
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36'}
+    URL = f'https://www.governmentjobs.com/jobs?location=portland%2C%20oregon&jobtype%5B0%5D=Full%20Time&daysPosted=654321&remoteworkoptionid=3&distance=10'
+    r = requests.get(URL, headers)
+    soup = BeautifulSoup(r.content, "html.parser")
+    return soup
+    
+
+#search Function - grab specific information from site
+#looked at site coding to gather information
+#Need o figure out how to get JUST salary 
+def SearchNSaveGov(soup):
+    job_info= soup.find_all('li', class_='job-item') #('div', class_='listRow')'div', class_='span12'
+    for item in job_info:
+        title = item.find('a', 'job-details-link').get_text()
+        job_url = baseURLgov + item.find('a', 'job-details-link').get('href')
+        location = item.find('div', class_='primaryInfo job-location').get_text()
+        job_summary = item.find('div', 'description hidden-phone').get_text() #added
+        date_posted = item.find('div', class_='termInfo').get_text()
+        find_salary = item.find(lambda tag: tag.name == 'div' and 'primaryInfo' in tag.get('class',[]) and not 'job-location' in tag['class'])
+        salary = (find_salary.get_text())
+        print(title)
+        
+        time.sleep(1) #let the site "breathe" between each search/gather information (attempt to lessen bandwidth use)
+        
+        #append file created with job lisitng information
+        with open(filename, 'a+') as jobfile:  
+                writejob = csv.writer(jobfile)
+                writejob.writerow((title, location, salary, date_posted, job_url, job_summary))
+
+
+#USAJOBS.GOV
+#<span class="usajobs-search-result--core__location-link viewmap"> or <a href="/job/660168200" class="usajobs-search-result--core__title search-joa-link" id="usajobs-search-result-0" itemprop="title" data-document-id="660168200">
+        #Transportation Specialist (Remote) (Open to both U.S. Citizens and Federal Employees)
+    
+#<h4 class="usajobs-search-result--core__agency"> Federal Highway Administration
+#<h5 class="usajobs-search-result--core__department">
+#<h4 class="usajobs-search-result--core__location" itemprop="addressLocality"> and or <span class="usajobs-search-result--core__location-link viewmap">
+#<li class="usajobs-search-result--core__item"> SALARY
+#<li class="usajobs-search-result--core__item usajobs-search-result--core__appt-type"> temp/perm, full/part
+
+                 
+                  
+#Run functions
+SearchNSaveGov(extractGov())
